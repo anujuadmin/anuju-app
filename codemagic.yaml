@@ -133,6 +133,13 @@ workflows:
           
           ## File Location:
           \`build/ios/ipa/Anuju.ipa\`
+          
+          ## Next Steps:
+          1. Download this IPA file
+          2. Go to App Store Connect
+          3. Create new app version
+          4. Upload this IPA
+          5. Submit for review
           EOF
           
           echo "✅ Metadata prepared"
@@ -146,42 +153,36 @@ workflows:
     
     # ========== PUBLISHING ==========
     publishing:
-      # Auto-upload to App Store Connect (TestFlight)
-      app_store_connect:
-        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
-        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
-        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
-        
-        # Upload to TestFlight for testing
-        submit_to_testflight: true
-        
-        # Release notes for TestFlight
-        release_notes:
-          'en-US': |
-            🚀 Anuju Travel App - Version $APP_VERSION
-            
-            • Book flights, hotels, and cars in one app
-            • Compare prices across hundreds of providers
-            • Secure booking with instant confirmation
-            • Mobile-exclusive deals and discounts
-            
-            Your feedback helps us improve! Share your experience.
+      # COMMENTED OUT: Auto-upload to App Store Connect
+      # To enable later, remove the comment marks (#) and configure credentials
+      #
+      # app_store_connect:
+      #   api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+      #   key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
+      #   issuer_id: $APP_STORE_CONNECT_ISSUER_ID
+      #   
+      #   # Upload to TestFlight for testing
+      #   submit_to_testflight: true
+      #   
+      #   # Release notes for TestFlight
+      #   release_notes:
+      #     'en-US': |
+      #       🚀 Anuju Travel App - Version $APP_VERSION
+      #       
+      #       • Book flights, hotels, and cars in one app
+      #       • Compare prices across hundreds of providers
+      #       • Secure booking with instant confirmation
+      #       • Mobile-exclusive deals and discounts
+      #       
+      #       Your feedback helps us improve! Share your experience.
       
-      # Email notification
+      # Email notification (keep this enabled)
       email:
         recipients:
-          - howard@anuju.com  # CHANGE THIS TO YOUR EMAIL
+          - admin@anuju.com  # CHANGE THIS TO YOUR EMAIL
         notify:
           success: true
           failure: true
-      
-      # Optional: Slack notification
-      # slack:
-      #   channel: '#builds'
-      #   notify_on_build_start: false
-      #   notify:
-      #     success: true
-      #     failure: true
       
       scripts:
         - name: Final Build Summary
@@ -193,10 +194,18 @@ workflows:
             echo "🔢 Version: $APP_VERSION ($BUILD_NUMBER)"
             echo "📦 Bundle ID: $BUNDLE_ID"
             echo ""
-            echo "⬇️ Download IPA from Artifacts section"
-            echo "📤 Auto-uploaded to TestFlight"
+            echo "⬇️ IPA FILE READY FOR DOWNLOAD"
+            echo "=============================="
             echo ""
-            echo "Next steps:"
-            echo "1. Test in TestFlight"
-            echo "2. Submit to App Store when ready"
-            echo "3. Update version for next release"
+            echo "📍 Location: build/ios/ipa/Anuju.ipa"
+            echo "📝 Size: $(du -h build/ios/ipa/Anuju.ipa | cut -f1)"
+            echo ""
+            echo "📤 MANUAL UPLOAD INSTRUCTIONS:"
+            echo "1. Go to https://appstoreconnect.apple.com"
+            echo "2. Create new app 'Anuju' (if not exists)"
+            echo "3. Go to TestFlight → iOS"
+            echo "4. Click '+' → New Version"
+            echo "5. Upload 'Anuju.ipa' file"
+            echo "6. Complete metadata and submit"
+            echo ""
+            echo "✅ Build complete! Download IPA from Artifacts section."
