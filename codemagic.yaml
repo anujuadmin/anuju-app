@@ -1,68 +1,202 @@
-# codemagic.yaml - TEST CONFIGURATION (No Credentials)
+# codemagic.yaml - PRODUCTION CONFIGURATION FOR ANUJU APP
+# Save this file in your project root: C:\Users\Howard\Desktop\Anuju-IOS\anuju\codemagic.yaml
+
 workflows:
-  test-ios-build:
-    name: Test iOS Build
-    environment:
-      # NO credentials group - testing only
-      vars:
-        BUNDLE_ID: "com.anuju.app.test"
-        XCODE_SCHEME: "Runner"
-    
-    # Only trigger manually
+  anuju-ios-production:
+    name: Anuju iOS Production Build
+    # This workflow will trigger on pushes to main branch
     triggering:
       events:
         - push
       branch_patterns:
-        - pattern: "test-build"
+        - pattern: 'main'
           include: true
+          source: true
+    
+    environment:
+      # You MUST set up these groups in Codemagic UI:
+      # 1. appstore_credentials (for signing)
+      # 2. environment_variables (optional, for secrets)
+      groups:
+        - appstore_credentials  # REQUIRED - set this up in Codemagic
+      
+      vars:
+        BUNDLE_ID: "com.anuju.app"
+        APP_NAME: "Anuju"
+        APP_VERSION: "1.0.0"
+        BUILD_NUMBER: "1"
+        XCODE_WORKSPACE: "Runner.xcworkspace"
+        XCODE_SCHEME: "Runner"
+      
+      # iOS code signing configuration
+      ios_signing:
+        distribution_type: app_store  # For App Store submission
+        bundle_identifier: $BUNDLE_ID
     
     scripts:
-      # 1. Setup
-      - name: Setup Flutter
+      # ========== PHASE 1: SETUP ==========
+      - name: Setup and Dependencies
         script: |
-          echo "Starting test build without signing..."
+          echo "🚀 Starting Anuju iOS Production Build"
+          echo "📱 Bundle ID: $BUNDLE_ID"
+          echo "🏷️  Version: $APP_VERSION ($BUILD_NUMBER)"
+          
+          # Print Flutter info
           flutter --version
+          
+          # Get Flutter dependencies
           flutter pub get
-      
-      # 2. iOS Setup (simulated)
-      - name: Simulate iOS setup
-        script: |
-          echo "Simulating iOS setup..."
+          
+          # Install iOS CocoaPods dependencies
           cd ios
-          # Don't run pod install (requires signing)
-          # pod install
+          pod install
           cd ..
-          echo "Skipped pod install (no credentials)"
       
-      # 3. Build for simulator (no signing needed)
-      - name: Build for iOS simulator
+      # ========== PHASE 2: CONFIGURE iOS ==========
+      - name: Configure iOS App
         script: |
-          echo "Building for iOS simulator..."
+          echo "⚙️ Configuring iOS app metadata..."
           
-          # Build for simulator (no signing required)
-          flutter build ios --simulator --debug
+          # Navigate to iOS directory
+          cd ios
           
-          echo "Build complete for simulator"
-          echo "This build CANNOT be uploaded to App Store"
-          echo "Use only for testing Flutter compilation"
+          # Update Info.plist with our values
+          /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName $APP_NAME" Runner/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $APP_VERSION" Runner/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" Runner/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $BUNDLE_ID" Runner/Info.plist
+          
+          # Enable WebView and allow HTTP loads
+          /usr/libexec/PlistBuddy -c "Add :io.flutter.embedded_views_preview bool true" Runner/Info.plist 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity dict" Runner/Info.plist 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSAllowsArbitraryLoads bool true" Runner/Info.plist 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSAllowsArbitraryLoadsInWebContent bool true" Runner/Info.plist 2>/dev/null || true
+          
+          echo "✅ iOS configuration complete"
+          cd ..
       
-      # 4. Check what was built
-      - name: List build artifacts
+      # ========== PHASE 3: BUILD IPA ==========
+      - name: Build iOS IPA
         script: |
-          echo "Build output:"
-          find build -name "*.app" -type d 2>/dev/null || echo "No .app files found"
-          find build -name "Flutter.podspec" -type f 2>/dev/null || echo "No podspec found"
-          ls -la build/ios/ 2>/dev/null || echo "No ios build directory"
+          echo "🔨 Building iOS IPA for App Store..."
+          
+          # Clean previous builds
+          flutter clean
+          
+          # Build IPA with App Store export method
+          flutter build ipa \
+            --release \
+            --export-method app-store \
+            --dart-define=APP_NAME=$APP_NAME \
+            --dart-define=APP_VERSION=$APP_VERSION \
+            --dart-define=BUNDLE_ID=$BUNDLE_ID \
+            --no-tree-shake-icons
+          
+          echo "✅ IPA build completed"
+          
+          # Verify IPA was created
+          if [ -f "build/ios/ipa/Runner.ipa" ]; then
+            IPA_SIZE=$(du -h "build/ios/ipa/Runner.ipa" | cut -f1)
+            echo "📦 IPA created: build/ios/ipa/Runner.ipa ($IPA_SIZE)"
+            
+            # Rename to Anuju.ipa
+            mv "build/ios/ipa/Runner.ipa" "build/ios/ipa/Anuju.ipa"
+            echo "🔄 Renamed to: build/ios/ipa/Anuju.ipa"
+          else
+            echo "❌ IPA not found at build/ios/ipa/Runner.ipa"
+            echo "📁 Checking for alternative locations..."
+            find build/ios -name "*.ipa" -type f || echo "No IPA files found"
+            exit 1
+          fi
+      
+      # ========== PHASE 4: CREATE APP STORE METADATA ==========
+      - name: Prepare App Store Metadata
+        script: |
+          echo "📋 Preparing App Store metadata..."
+          
+          # Create a metadata file with build info
+          cat > build_info.md << EOF
+          # Anuju iOS Build Information
+          
+          - **App Name**: $APP_NAME
+          - **Version**: $APP_VERSION
+          - **Build Number**: $BUILD_NUMBER
+          - **Bundle ID**: $BUNDLE_ID
+          - **Build Date**: $(date)
+          - **Build Type**: App Store Release
+          
+          ## What's Included:
+          ✓ Flutter WebView application
+          ✓ Loads https://anuju.com
+          ✓ iOS 12.0+ support
+          ✓ iPhone & iPad support
+          
+          ## File Location:
+          \`build/ios/ipa/Anuju.ipa\`
+          EOF
+          
+          echo "✅ Metadata prepared"
     
-    # No artifacts (simulator builds can't create IPA)
+    # ========== ARTIFACTS ==========
+    # These files will be available for download
     artifacts:
+      - build/ios/ipa/Anuju.ipa
+      - build_info.md
       - flutter_drive.log
     
+    # ========== PUBLISHING ==========
     publishing:
+      # Auto-upload to App Store Connect (TestFlight)
+      app_store_connect:
+        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
+        
+        # Upload to TestFlight for testing
+        submit_to_testflight: true
+        
+        # Release notes for TestFlight
+        release_notes:
+          'en-US': |
+            🚀 Anuju Travel App - Version $APP_VERSION
+            
+            • Book flights, hotels, and cars in one app
+            • Compare prices across hundreds of providers
+            • Secure booking with instant confirmation
+            • Mobile-exclusive deals and discounts
+            
+            Your feedback helps us improve! Share your experience.
+      
+      # Email notification
+      email:
+        recipients:
+          - howard@anuju.com  # CHANGE THIS TO YOUR EMAIL
+        notify:
+          success: true
+          failure: true
+      
+      # Optional: Slack notification
+      # slack:
+      #   channel: '#builds'
+      #   notify_on_build_start: false
+      #   notify:
+      #     success: true
+      #     failure: true
+      
       scripts:
-        - name: Test completion message
+        - name: Final Build Summary
           script: |
-            echo "✅ TEST BUILD COMPLETE"
-            echo "⚠️  This is a SIMULATOR build only"
-            echo "⚠️  No IPA file generated (needs code signing)"
-            echo "📝 To build for App Store, add appstore_credentials"
+            echo ""
+            echo "🎉 ANUJU iOS BUILD SUCCESSFUL 🎉"
+            echo "================================="
+            echo "📱 App: $APP_NAME"
+            echo "🔢 Version: $APP_VERSION ($BUILD_NUMBER)"
+            echo "📦 Bundle ID: $BUNDLE_ID"
+            echo ""
+            echo "⬇️ Download IPA from Artifacts section"
+            echo "📤 Auto-uploaded to TestFlight"
+            echo ""
+            echo "Next steps:"
+            echo "1. Test in TestFlight"
+            echo "2. Submit to App Store when ready"
+            echo "3. Update version for next release"
