@@ -1,0 +1,68 @@
+# codemagic.yaml - TEST CONFIGURATION (No Credentials)
+workflows:
+  test-ios-build:
+    name: Test iOS Build
+    environment:
+      # NO credentials group - testing only
+      vars:
+        BUNDLE_ID: "com.anuju.app.test"
+        XCODE_SCHEME: "Runner"
+    
+    # Only trigger manually
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: "test-build"
+          include: true
+    
+    scripts:
+      # 1. Setup
+      - name: Setup Flutter
+        script: |
+          echo "Starting test build without signing..."
+          flutter --version
+          flutter pub get
+      
+      # 2. iOS Setup (simulated)
+      - name: Simulate iOS setup
+        script: |
+          echo "Simulating iOS setup..."
+          cd ios
+          # Don't run pod install (requires signing)
+          # pod install
+          cd ..
+          echo "Skipped pod install (no credentials)"
+      
+      # 3. Build for simulator (no signing needed)
+      - name: Build for iOS simulator
+        script: |
+          echo "Building for iOS simulator..."
+          
+          # Build for simulator (no signing required)
+          flutter build ios --simulator --debug
+          
+          echo "Build complete for simulator"
+          echo "This build CANNOT be uploaded to App Store"
+          echo "Use only for testing Flutter compilation"
+      
+      # 4. Check what was built
+      - name: List build artifacts
+        script: |
+          echo "Build output:"
+          find build -name "*.app" -type d 2>/dev/null || echo "No .app files found"
+          find build -name "Flutter.podspec" -type f 2>/dev/null || echo "No podspec found"
+          ls -la build/ios/ 2>/dev/null || echo "No ios build directory"
+    
+    # No artifacts (simulator builds can't create IPA)
+    artifacts:
+      - flutter_drive.log
+    
+    publishing:
+      scripts:
+        - name: Test completion message
+          script: |
+            echo "✅ TEST BUILD COMPLETE"
+            echo "⚠️  This is a SIMULATOR build only"
+            echo "⚠️  No IPA file generated (needs code signing)"
+            echo "📝 To build for App Store, add appstore_credentials"
