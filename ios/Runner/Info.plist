@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Anuju</string>
+	<string>Anuju</string>  <!-- Updated display name -->
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -45,5 +45,66 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	
+	<!-- ===== ADD THESE SECTIONS BELOW ===== -->
+	
+	<!-- 1. ALLOW HTTP LOADING (Required for some websites) -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+		<key>NSAllowsArbitraryLoadsInWebContent</key>
+		<true/>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+	
+	<!-- 2. ENABLE WEBVIEW -->
+	<key>io.flutter.embedded_views_preview</key>
+	<true/>
+	
+	<!-- 3. BACKGROUND MODES (Optional but recommended) -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+		<string>remote-notification</string>
+	</array>
+	
+	<!-- 4. SUPPORTED DEVICE FAMILIES -->
+	<key>UIDeviceFamily</key>
+	<array>
+		<integer>1</integer>  <!-- iPhone -->
+		<integer>2</integer>  <!-- iPad -->
+	</array>
+	
+	<!-- 5. SCREEN ORIENTATIONS FOR WEBVIEW -->
+	<key>UIRequiresFullScreen</key>
+	<false/>
+	
+	<!-- 6. PRIVACY PERMISSIONS (Add these if needed later) -->
+	<!--
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>We need your location to show nearby hotels and car rentals</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>To upload photos for your travel reviews</string>
+	<key>NSCameraUsageDescription</key>
+	<string>To take photos for your travel reviews</string>
+	-->
+	
+	<!-- 7. SUPPORTS MULTITASKING (iPad & newer iPhones) -->
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+	</dict>
+	
+	<!-- 8. DISABLE BITCODE (Simplifies builds) -->
+	<key>EnableBitcode</key>
+	<false/>
+	
+	<!-- 9. MINIMUM OS VERSION -->
+	<key>MinimumOSVersion</key>
+	<string>12.0</string>  <!-- iOS 12+ -->
+	
 </dict>
 </plist>
